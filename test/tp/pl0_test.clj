@@ -31,6 +31,69 @@
 (deftest inicializar-contexto-local-test
   (testing "Prueba de"
     (is (= '[nil () [] :error [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]] (inicializar-contexto-local '[nil () [] :error [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]])))
-    (is (= '[nil () [] :sin-errores [[0 3] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]] (inicializar-contexto-local '[nil () [] :sin-errores [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]])))
+    (is (= '[nil () [] :sin-errores [[0 3] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]] (inicializar-contexto-local '[nil () [] :sin-errores [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]])))))
+
+(deftest aplicar-aritmetico-test                            ;No terminado
+  (testing "Prueba de la función aplicar-aritmetico"
+    (is (= [3] (aplicar-aritmetico + [1 2])))
+    (is (= [1 3] (aplicar-aritmetico - [1 4 1])))
+    (is (= [1 8] (aplicar-aritmetico * [1 2 4])))
+    (is (= [1 0] (aplicar-aritmetico / [1 2 4])))
+    (is (= nil (aplicar-aritmetico + nil)))
+    (is (= [] (aplicar-aritmetico + [])))
+    (is (= [1] (aplicar-aritmetico + [1])))
+    ;(is (= [1 2 4] (aplicar-aritmetico 'hola [1 2 4])))
+    ;(is (= [1 2 4] (aplicar-aritmetico count [1 2 4])))
+    ;(is (= [a b c] (aplicar-aritmetico + '[a b c])))
     ))
+
+(deftest aplicar-relacional-test                            ;No terminado
+  (testing "Prueba de la función aplicar-relacional"
+    (is (= [1] (aplicar-relacional > [7 5])))
+    (is (= [4 1] (aplicar-relacional > [4 7 5])))
+    (is (= [4 0] (aplicar-relacional = [4 7 5])))
+    (is (= [4 1] (aplicar-relacional not= [4 7 5])))
+    (is (= [4 0] (aplicar-relacional < [4 7 5])))
+    (is (= [4 1] (aplicar-relacional <= [4 6 6])))
+    ;(is (= [a b c] (aplicar-relacional <= '[a b c])))
+    ))
+
+(deftest dump-test
+  (testing "Prueba de la función dump"
+    (is (= (dump '[[PFM 0] [PFI 2] MUL [PFI 1] ADD NEG])))
+    (is (= (dump '[HLT])))
+    (is (= (dump nil)))))
+
+(deftest generar-test
+  (testing "Prueba de la función generar"
+    (is (= '[nil () [VAR X] :sin-errores [[0] []] 0 [[JMP ?] HLT]] (generar '[nil () [VAR X] :sin-errores [[0] []] 0 [[JMP ?]]] 'HLT)))
+    (is (= '[nil () [VAR X] :sin-errores [[0] []] 0 [[JMP ?] [PFM 0]]] (generar '[nil () [VAR X] :sin-errores [[0] []] 0 [[JMP ?]]] 'PFM 0)))
+    (is (= '[nil () [VAR X] :error [[0] []] 0 [[JMP ?]]] (generar '[nil () [VAR X] :error [[0] []] 0 [[JMP ?]]] 'HLT)))
+    (is (= '[nil () [VAR X] :error [[0] []] 0 [[JMP ?]]] (generar '[nil () [VAR X] :error [[0] []] 0 [[JMP ?]]] 'PFM 0)))))
+
+(deftest buscar-coincidencias-test
+  (testing "Prueba de la función buscar-coincidencias"
+    (is (= '([X VAR 0] [X VAR 2]) (buscar-coincidencias '[nil () [CALL X] :sin-errores [[0 3] [[X VAR 0] [Y VAR 1] [A PROCEDURE 1] [X VAR 2] [Y VAR 3] [B PROCEDURE 2]]] 6 [[JMP ?] [JMP 4] [CAL 1] RET]])))))
+
+(deftest fixup-test
+  (testing "Prueba de la función fixup"
+    (is (= '[WRITELN (END .) [] :error [[0 3] []] 6  [[JMP ?] [JMP ?] [CAL 1] RET]] (fixup ['WRITELN (list 'END (symbol ".")) [] :error [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] 1)))
+    (is (= '[WRITELN (END .) [] :sin-errores [[0 3] []] 6  [[JMP ?] [JMP 4] [CAL 1] RET]] (fixup ['WRITELN (list 'END (symbol ".")) [] :sin-errores [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] 1)))
+    (is (= '[WRITELN (END .) [] :sin-errores [[0 3] []] 6  [[JMP 8] [JMP 4] [CAL 1] RET [PFM 2] OUT NL RET]] (fixup ['WRITELN (list 'END (symbol ".")) [] :sin-errores [[0 3] []] 6 '[[JMP ?] [JMP 4] [CAL 1] RET [PFM 2] OUT NL RET]] 0)))))
+
+(deftest generar-signo-test
+  (testing "Prueba de la función generar-signo"
+    (is (= '[nil () [] :error [[0] [[X VAR 0]]] 1 [MUL ADD]] (generar-signo [nil () [] :error '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '-)))
+    (is (= '[nil () [] :error [[0] [[X VAR 0]]] 1 [MUL ADD]] (generar-signo [nil () [] :error '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '+)))
+    (is (= '[nil () [] :sin-errores [[0] [[X VAR 0]]] 1 [MUL ADD]] (generar-signo [nil () [] :sin-errores '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '+)))
+    (is (= '[nil () [] :sin-errores [[0] [[X VAR 0]]] 1 [MUL ADD]] (generar-signo [nil () [] :sin-errores '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '*)))
+    (is (= '[nil () [] :sin-errores [[0] [[X VAR 0]]] 1 [MUL ADD NEG]] (generar-signo [nil () [] :sin-errores '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '-)))
+    ))
+
+(deftest generar-operador-relacional-test
+  (testing "Prueba de la función generar-operador-relacional"
+    (is (= '[WRITELN (END .) [] :error [[0 3] []] 6 [[JMP ?] [JMP ?] [CAL 1] RET]] (generar-operador-relacional ['WRITELN (list 'END (symbol ".")) [] :error [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] '=)))
+    (is (= '[WRITELN (END .) [] :sin-errores [[0 3] []] 6 [[JMP ?] [JMP ?] [CAL 1] RET]] (generar-operador-relacional ['WRITELN (list 'END (symbol ".")) [] :sin-errores [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] '+)))
+    (is (= '[WRITELN (END .) [] :sin-errores [[0 3] []] 6 [[JMP ?] [JMP ?] [CAL 1] RET EQ]] (generar-operador-relacional ['WRITELN (list 'END (symbol ".")) [] :sin-errores [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] '=)))
+    (is (= '[WRITELN (END .) [] :sin-errores [[0 3] []] 6 [[JMP ?] [JMP ?] [CAL 1] RET GTE]] (generar-operador-relacional ['WRITELN (list 'END (symbol ".")) [] :sin-errores [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] '>=)))))
 

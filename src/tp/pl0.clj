@@ -859,7 +859,12 @@
 ; [a b c]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn aplicar-aritmetico [op pila]
-)
+  (if (> (count pila) 1)
+    (let [ultimos-dos (subvec pila (- (count pila) 2))]
+      (if (reduce (fn [x y] (and x y)) (map number? ultimos-dos))
+        (conj (mapv (fn [x] x) (butlast (butlast pila))) (int (apply op ultimos-dos)))
+        pila))
+    pila))                                                  ; FALTA VERIFICAR SI EL OPERADOR ES CORRECTO
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un operador relacional de Clojure y un vector. Si el vector tiene mas de un elemento y si los dos
@@ -882,7 +887,12 @@
 ; [a b c]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn aplicar-relacional [op pila]
-)
+  (if (> (count pila) 1)
+    (let [ultimos-dos (subvec pila (- (count pila) 2))]
+      (if (reduce (fn [x y] (and x y)) (map number? ultimos-dos))
+        (conj (mapv (fn [x] x) (butlast (butlast pila))) (get {false 0 true 1} (apply op ultimos-dos)))
+        pila))
+    pila))                                                  ;FALTA ÚLTIMO CASO
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un vector con instrucciones de la RI y las imprime numeradas a partir de 0. Siempre retorna nil.
@@ -901,8 +911,16 @@
 ; 0 nil
 ; nil
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn dump [cod]
-)
+(defn dump
+  ([cod] (dump 0 cod))
+  ([pos cod]
+    (cond
+      (not (empty? cod))
+        (do
+          (prn pos (first cod))
+          (dump (inc pos) (next cod)))
+      (and (nil? cod) (= 0 pos)) (prn 0 nil)
+      :else nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Si recibe un ambiente y una instruccion de la RI, y si el estado es :sin-errores, devuelve el ambiente con la
@@ -920,10 +938,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn generar 
   ([amb instr]
-  )
+   (if (= (nth amb 3) :sin-errores)
+     (assoc amb 6 (conj (nth amb 6) instr))
+     amb))
   ([amb instr val]
-  )
-)
+   (if (= (nth amb 3) :sin-errores)
+     (assoc amb 6 (conj (nth amb 6) (vector instr val)))
+     amb)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y devuelve una lista con las ternas [identificador, tipo, valor] provenientes del segundo
@@ -933,7 +954,7 @@
 ; ([X VAR 0] [X VAR 2])
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn buscar-coincidencias [amb]
-)
+  (filter (fn [x] (= (first x) (last (nth amb 2)))) (nth (nth amb 4) 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y la ubicacion de un JMP a corregir en el vector de bytecode. Si el estado no es :sin-errores,
@@ -947,7 +968,11 @@
 ; [WRITELN (END .) [] :sin-errores [[0 3] []] 6 [[JMP 8] [JMP 4] [CAL 1] RET [PFM 2] OUT NL RET]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn fixup [amb ubi]
-)
+  (if (= (nth amb 3) :sin-errores)
+    (assoc amb 6 (assoc (bytecode amb) ubi (conj (pop (nth (bytecode amb) ubi)) (count (bytecode amb)))))
+    amb))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y un operador relacional de PL/0. Si el estado no es :sin-errores o si el operador no es
@@ -963,7 +988,18 @@
 ; [WRITELN (END .) [] :sin-errores [[0 3] []] 6 [[JMP ?] [JMP ?] [CAL 1] RET GTE]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn generar-operador-relacional [amb operador]
+  (let [operadores {'= 'EQ, '<> 'NEQ, '> 'GT, '>= 'GTE, '< 'LT. '<= 'LTE}]
+    (cond
+      (and (= (estado amb) :sin-errores) (contains? operadores operador)) (assoc amb 6 (conj (bytecode amb) (get operadores operador)))
+      :else amb))
 )
+
+;EQ : Reemplaza los dos valores ubicados en el tope de la pila de datos por 1 si son iguales (si no, por 0) e incrementa el contador de programa
+; NEQ: Reemplaza los dos valores ubicados en el tope de la pila de datos por 1 si son distintos (si no, por 0) e incrementa el contador de programa
+; GT : Reemplaza los dos valores ubicados en el tope de la pila de datos por 1 si el valor ubicado debajo del tope es mayor que el ubicado en el tope (si no, por 0) e incrementa el contador de programa
+; GTE: Reemplaza los dos valores ubicados en el tope de la pila de datos por 1 si el valor ubicado debajo del tope es mayor o igual que el ubicado en el tope (si no, por 0) e incrementa el contador de programa
+; LT : Reemplaza los dos valores ubicados en el tope de la pila de datos por 1 si el valor ubicado debajo del tope es menor que el ubicado en el tope (si no, por 0) e incrementa el contador de programa
+; LTE:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y un operador monadico de signo de PL/0. Si el estado no es :sin-errores o si el operador no es
@@ -973,7 +1009,7 @@
 ; [nil () [] :error [[0] [[X VAR 0]]] 1 [MUL ADD]]
 ; user=> (generar-signo [nil () [] :error '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '+)
 ; [nil () [] :error [[0] [[X VAR 0]]] 1 [MUL ADD]]
-; user=> (generar-signo [nil () [] :sin-errores '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '+)
+; user=> (generar-signo [nil () [] :sin-errores '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '+) ;no es válida?
 ; [nil () [] :sin-errores [[0] [[X VAR 0]]] 1 [MUL ADD]]
 ; user=> (generar-signo [nil () [] :sin-errores '[[0] [[X VAR 0]]] 1 '[MUL ADD]] '*)
 ; [nil () [] :sin-errores [[0] [[X VAR 0]]] 1 [MUL ADD]]
@@ -981,6 +1017,10 @@
 ; [nil () [] :sin-errores [[0] [[X VAR 0]]] 1 [MUL ADD NEG]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn generar-signo [amb signo]
-)
+  (let [operadores {'- 'NEG}]
+    (cond
+      (and (= (estado amb) :sin-errores) (contains? operadores signo)) (assoc amb 6 (conj (bytecode amb) (get operadores signo)))
+      :else amb)))
+
 
 true
