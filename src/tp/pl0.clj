@@ -217,7 +217,7 @@
   (amb 6)
 )
 
-(defn escanear [amb] 
+(defn escanear [amb]
   (if (= (estado amb) :sin-errores)
       [(let [simb (first (simb-no-parseados-aun amb))]
             (if (nil? simb) 'EOF simb)) (rest (simb-no-parseados-aun amb)) (conj (simb-ya-parseados amb) (simb-actual amb)) (estado amb) (contexto amb) (prox-var amb) (bytecode amb)]
@@ -294,7 +294,7 @@
 (defn programa [amb]
   (-> amb
       (inicializar-contexto-global)
-      (bloque)  
+      (bloque)
       (procesar-terminal ,,, (symbol ".") 2)
       (generar ,,, 'HLT))
 )
@@ -456,7 +456,7 @@
                           (expresion)
                           (generar ,,, 'POP valor)))
                   primera-fase))
-          (case (simb-actual amb) 
+          (case (simb-actual amb)
                 CALL (-> amb
                          (escanear)
                          (procesar-terminal ,,, identificador? 5)
@@ -515,7 +515,7 @@
 
 (defn procesar-operador-relacional [amb]
   (if (= (estado amb) :sin-errores)
-      (case (simb-actual amb) 
+      (case (simb-actual amb)
          = (-> amb
                (escanear))
         <> (-> amb
@@ -553,7 +553,7 @@
 
 (defn procesar-mas-terminos [amb]
   (if (= (estado amb) :sin-errores)
-      (case (simb-actual amb) 
+      (case (simb-actual amb)
          + (-> amb
                (escanear)
                (termino)
@@ -570,7 +570,7 @@
 
 (defn procesar-mas-factores [amb]
   (if (= (estado amb) :sin-errores)
-      (case (simb-actual amb) 
+      (case (simb-actual amb)
          * (-> amb
                (escanear)
                (factor)
@@ -595,7 +595,7 @@
         (integer? (simb-actual amb)) (let [num (simb-actual amb)]
                                           (-> amb
                                               (escanear)
-                                              (generar ,,, 'PFI num)))  
+                                              (generar ,,, 'PFI num)))
         (= (simb-actual amb) (symbol "(")) (-> amb
                                                (escanear)
                                                (expresion)
@@ -618,8 +618,8 @@
             tipo (second (last coincidencias)),
             valor (nth (last coincidencias) 2)]
            (if (= tipo 'CONST)
-               (generar amb 'PFI valor)        
-               (generar amb 'PFM valor)))      
+               (generar amb 'PFI valor)
+               (generar amb 'PFM valor)))
       amb)
 )
 
@@ -683,8 +683,14 @@
 ; user=> (a-mayusculas-salvo-strings "  writeln ('Se ingresa un valor, se muestra su doble.');")
 ; "  WRITELN ('Se ingresa un valor, se muestra su doble.');"
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn a-mayusculas-salvo-strings [s] 
-)
+(defn a-mayusculas-salvo-strings
+  ([s]
+   ;(clojure.string/replace (clojure.string/upper-case s) #"['].*[']" #(clojure.string/lower-case %1))
+   (a-mayusculas-salvo-strings (clojure.string/upper-case s) (list (re-find #"['].*[']" (str s)))))
+  ([s strings]
+   (if (and (not (empty? strings)) (not (nil? (first strings))))
+      (a-mayusculas-salvo-strings (clojure.string/replace s (clojure.string/upper-case (first strings)) (first strings)) (next strings))
+      s)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un dato y devuelve true si es una palabra reservada de PL/0; si no, devuelve false. Por ejemplo:
@@ -745,7 +751,6 @@
 ; user=> (ya-declarado-localmente? 'Y '[[0 3 5] [[X VAR 0] [Y VAR 1] [INICIAR PROCEDURE 1] [Y CONST 2] [ASIGNAR PROCEDURE 2] [Y CONST 6]]])
 ; true
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;para cada uno del segundo de context hacer un map, and  de si el primero es ident y el tercero es mayor al último del primero de context
 (defn ya-declarado-localmente? [ident context]
   (reduce (fn [x y] (or x y)) (map (fn [x] (and (= (first x) ident) (> (last x) (last (first context))))) (nth context 1))))
 
@@ -760,9 +765,14 @@
 ; user=> (cargar-var-en-tabla '[nil () [VAR X , Y] :sin-errores [[0] [[X VAR 0]]] 1 [[JMP ?]]])
 ; [nil () [VAR X Y] :sin-errores [[0] [[X VAR 0] [Y VAR 1]]] 2 [[JMP ?]]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;En
+
 (defn cargar-var-en-tabla [amb]
-  )
+  (let [var (last (simb-ya-parseados amb)), ]
+    (if (= :sin-errores (estado amb))
+      (assoc (assoc amb 4 (assoc (contexto amb) 1 (conj (nth (contexto amb) 1) (vector var 'VAR (prox-var amb))))) 5 (inc (prox-var amb)))
+      amb)))
+
+; [simb-actual  simb-no-parseados-aun  simb-ya-parseados  estado  contexto  prox-var  bytecode]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y, si su estado no es :sin-errores, lo devuelve intacto. De lo contrario, lo devuelve modificado
@@ -791,6 +801,12 @@
 (defn declaracion-var [amb]
 )
 
+
+['VAR (list 'X (symbol ",") 'Y (symbol ";") 'BEGIN 'X (symbol ":=") 7 (symbol ";") 'Y (symbol ":=") 12 (symbol ";") 'END (symbol ".")) [] :sin-errores [[0] []] 0 '[[JMP ?]]]
+[BEGIN (X := 7 ; Y := 12 ; END .) [VAR X , Y ;] :sin-errores [[0] [[X VAR 0] [Y VAR 1]]] 2 [[JMP ?]]]
+
+;[simb-actual  simb-no-parseados-aun  simb-ya-parseados  estado  contexto  prox-var  bytecode]
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y, si su estado no es :sin-errores, lo devuelve intacto. De lo contrario, verifica si se debe
 ; parsear un signo unario (+ o -). Si no es asi, se devuelve el ambiente intacto. De lo contrario, se devuelve un
@@ -805,7 +821,14 @@
 ; [7 (; Y := - 12 ; END .) [VAR X , Y ; BEGIN X := -] :sin-errores [[0] [[X VAR 0] [Y VAR 1]]] 2 []]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn procesar-signo-unario [amb]
-)
+  (if (and (= (estado amb) :sin-errores) (or (= (simb-actual amb) '+) (= (simb-actual amb) '-)))
+    (assoc (assoc (assoc amb 0 (first (simb-no-parseados-aun amb))) 1  (drop 1 (simb-no-parseados-aun amb))) 2 (conj (simb-ya-parseados amb) (simb-actual amb)))
+    amb))
+
+
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y, si su estado no es :sin-errores, lo devuelve intacto. De lo contrario, se devuelve un
@@ -818,6 +841,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn termino [amb]
 )
+
+
+
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y, si su estado no es :sin-errores, lo devuelve intacto. De lo contrario, se devuelve un
@@ -936,7 +965,7 @@
 ; user=> (generar '[nil () [VAR X] :error [[0] []] 0 [[JMP ?]]] 'PFM 0)
 ; [nil () [VAR X] :error [[0] []] 0 [[JMP ?]]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn generar 
+(defn generar
   ([amb instr]
    (if (= (nth amb 3) :sin-errores)
      (assoc amb 6 (conj (nth amb 6) instr))
@@ -949,7 +978,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y devuelve una lista con las ternas [identificador, tipo, valor] provenientes del segundo
 ; subvector del vector contexto que tengan como identificador al ultimo simbolo ubicado en el vector de simbolos ya
-; escaneados. Por ejemplo: 
+; escaneados. Por ejemplo:
 ; user=> (buscar-coincidencias '[nil () [CALL X] :sin-errores [[0 3] [[X VAR 0] [Y VAR 1] [A PROCEDURE 1] [X VAR 2] [Y VAR 3] [B PROCEDURE 2]]] 6 [[JMP ?] [JMP 4] [CAL 1] RET]])
 ; ([X VAR 0] [X VAR 2])
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -977,7 +1006,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un ambiente y un operador relacional de PL/0. Si el estado no es :sin-errores o si el operador no es
 ; valido, devuelve el ambiente intacto. De lo contrario, devuelve el ambiente con la instruccion de la RI
-; correspondiente al operador relacional agregada en el vector de bytecode. Por ejemplo: 
+; correspondiente al operador relacional agregada en el vector de bytecode. Por ejemplo:
 ; user=> (generar-operador-relacional ['WRITELN (list 'END (symbol ".")) [] :error [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] '=)
 ; [WRITELN (END .) [] :error [[0 3] []] 6 [[JMP ?] [JMP ?] [CAL 1] RET]]
 ; user=> (generar-operador-relacional ['WRITELN (list 'END (symbol ".")) [] :sin-errores [[0 3] []] 6 '[[JMP ?] [JMP ?] [CAL 1] RET]] '+)
