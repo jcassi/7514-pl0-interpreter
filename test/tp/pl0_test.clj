@@ -34,7 +34,7 @@
     (is (= '[nil () [] :error [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]] (inicializar-contexto-local '[nil () [] :error [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]])))
     (is (= '[nil () [] :sin-errores [[0 3] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]] (inicializar-contexto-local '[nil () [] :sin-errores [[0] [[X VAR 0] [Y VAR 1] [INI PROCEDURE 1]]] 2 [[JMP ?]]])))))
 
-(deftest aplicar-aritmetico-test                           
+(deftest aplicar-aritmetico-test
   (testing "Prueba de la función aplicar-aritmetico"
     (is (= [3] (aplicar-aritmetico + [1 2])))
     (is (= [1 3] (aplicar-aritmetico - [1 4 1])))
