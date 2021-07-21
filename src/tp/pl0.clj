@@ -966,12 +966,12 @@
 ; [a b c]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn aplicar-aritmetico [op pila]
-  (if (> (count pila) 1)
+  (if (and (> (count pila) 1)  (or (= + op) (= - op) (= * op) (= / op)))
     (let [ultimos-dos (subvec pila (- (count pila) 2))]
       (if (reduce (fn [x y] (and x y)) (map number? ultimos-dos))
         (conj (mapv (fn [x] x) (butlast (butlast pila))) (int (apply op ultimos-dos)))
         pila))
-    pila))                                                ; FALTA VERIFICAR SI EL OPERADOR ES CORRECTO
+    pila))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un operador relacional de Clojure y un vector. Si el vector tiene mas de un elemento y si los dos
@@ -999,7 +999,7 @@
       (if (reduce (fn [x y] (and x y)) (map number? ultimos-dos))
         (conj (mapv (fn [x] x) (butlast (butlast pila))) (get {false 0 true 1} (apply op ultimos-dos)))
         pila))
-    pila))                                                ;FALTA ÚLTIMO CASO
+    pila))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Recibe un vector con instrucciones de la RI y las imprime numeradas a partir de 0. Siempre retorna nil.
